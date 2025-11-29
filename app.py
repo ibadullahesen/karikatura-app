@@ -12,36 +12,10 @@ os.makedirs("/tmp/cartoon_images", exist_ok=True)
 
 # 🎨 KARİKATURA MODELLƏRİ
 MODELS = [
-    {
-        "name": "🎭 Karikatura Stili", 
-        "description": "Canlı rənglər və karikatura təsiri",
-        "type": "cartoon"
-    },
-    {
-        "name": "✏️ Qələm Çəkilişi", 
-        "description": "Qara-ağ qələm təsiri", 
-        "type": "pencil"
-    },
-    {
-        "name": "🌟 Anime Effekti", 
-        "description": "Parlaq anime rəngləri",
-        "type": "anime"
-    },
-    {
-        "name": "🎨 Komik Kitab", 
-        "description": "Komik kitab tərzində",
-        "type": "comic"
-    },
-    {
-        "name": "🖼️ Rəssam Təsiri", 
-        "description": "Rəssam çəkilişi kimi",
-        "type": "painterly"
-    },
-    {
-        "name": "📐 Pop-Art Stili", 
-        "description": "Pop-art stili effekti",
-        "type": "popart"
-    }
+    {"name": "🎭 Karikatura", "description": "Canlı rənglər", "type": "cartoon"},
+    {"name": "✏️ Qələm", "description": "Qara-ağ çəkiliş", "type": "pencil"},
+    {"name": "🌟 Anime", "description": "Parlaq rənglər", "type": "anime"},
+    {"name": "🎨 Komik", "description": "Komik kitab stili", "type": "comic"}
 ]
 
 def apply_cartoon_effect(image):
@@ -51,159 +25,94 @@ def apply_cartoon_effect(image):
         if img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # Ölçüsünü tənzimlə
         if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+            img.thumbnail((800, 800))
         
-        # 1. Kənarları tap
+        # Kənarları tap
         gray = img.convert('L')
         edges = gray.filter(ImageFilter.FIND_EDGES)
         edges = ImageEnhance.Brightness(edges).enhance(2.0)
         
-        # 2. Rəngləri canlandır
+        # Rəngləri canlandır
         enhanced = ImageEnhance.Color(img).enhance(1.6)
         enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
-        enhanced = ImageEnhance.Sharpness(enhanced).enhance(2.0)
         
-        # 3. Rəng sayını azalt
+        # Rəng sayını azalt
         quantized = enhanced.quantize(colors=16)
         quantized = quantized.convert('RGB')
         
-        # 4. Kənarları əlavə et
+        # Kənarları əlavə et
         final = Image.blend(quantized, edges.convert('RGB'), 0.08)
-        
         return final
         
     except Exception as e:
-        print(f"Karikatura effekti xətası: {e}")
+        print(f"Karikatura xətası: {e}")
         return image
 
 def apply_pencil_sketch(image):
-    """Qələm çəkilişi effekti"""
+    """Qələm çəkilişi"""
     try:
         img = image.copy()
         if img.mode != 'RGB':
             img = img.convert('RGB')
             
         if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+            img.thumbnail((800, 800))
         
-        # Qələm çəkilişi
         gray = img.convert('L')
         inverted = ImageOps.invert(gray)
         blurred = inverted.filter(ImageFilter.GaussianBlur(radius=2))
-        pencil_sketch = Image.blend(gray, blurred, 0.75)
-        pencil_sketch = ImageEnhance.Contrast(pencil_sketch).enhance(2.0)
+        pencil = Image.blend(gray, blurred, 0.75)
+        pencil = ImageEnhance.Contrast(pencil).enhance(2.0)
         
-        return pencil_sketch.convert('RGB')
+        return pencil.convert('RGB')
         
     except Exception as e:
-        print(f"Qələm effekti xətası: {e}")
+        print(f"Qələm xətası: {e}")
         return image
 
 def apply_anime_effect(image):
-    """Anime stili effekti"""
+    """Anime effekti"""
     try:
         img = image.copy()
         if img.mode != 'RGB':
             img = img.convert('RGB')
             
         if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+            img.thumbnail((800, 800))
         
-        # Anime təsiri
         enhanced = ImageEnhance.Color(img).enhance(1.8)
         enhanced = ImageEnhance.Brightness(enhanced).enhance(1.1)
         enhanced = ImageEnhance.Contrast(enhanced).enhance(1.4)
         
         sharpened = enhanced.filter(ImageFilter.SHARPEN)
-        sharpened = sharpened.filter(ImageFilter.DETAIL)
-        
         quantized = sharpened.quantize(colors=32)
-        result = quantized.convert('RGB')
-        
-        return result
+        return quantized.convert('RGB')
         
     except Exception as e:
-        print(f"Anime effekti xətası: {e}")
+        print(f"Anime xətası: {e}")
         return image
 
 def apply_comic_effect(image):
-    """Komik kitab effekti"""
+    """Komik effekti"""
     try:
         img = image.copy()
         if img.mode != 'RGB':
             img = img.convert('RGB')
             
         if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+            img.thumbnail((800, 800))
         
-        # Komik kitab təsiri
         quantized = img.quantize(colors=12)
         quantized = quantized.convert('RGB')
         
         enhanced = ImageEnhance.Contrast(quantized).enhance(1.8)
         enhanced = ImageEnhance.Sharpness(enhanced).enhance(3.0)
         
-        # Qara kənarlar
-        gray = enhanced.convert('L')
-        edges = gray.filter(ImageFilter.FIND_EDGES)
-        edges = ImageEnhance.Brightness(edges).enhance(3.0)
-        edges = edges.point(lambda x: 0 if x < 100 else 255)
-        
-        final = enhanced.copy()
-        final.paste((0, 0, 0), mask=edges)
-        
-        return final
+        return enhanced
         
     except Exception as e:
-        print(f"Komik effekti xətası: {e}")
-        return image
-
-def apply_painterly_effect(image):
-    """Rəssam təsiri"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
-        
-        # Rəssam təsiri
-        smoothed = img.filter(ImageFilter.SMOOTH_MORE)
-        enhanced = ImageEnhance.Color(smoothed).enhance(1.4)
-        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
-        
-        quantized = enhanced.quantize(colors=20)
-        result = quantized.convert('RGB')
-        
-        return result
-        
-    except Exception as e:
-        print(f"Rəssam effekti xətası: {e}")
-        return image
-
-def apply_popart_effect(image):
-    """Pop-art effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.Resampling.LANCZOS)
-        
-        # Pop-art üçün
-        high_contrast = ImageEnhance.Contrast(img).enhance(2.0)
-        saturated = ImageEnhance.Color(high_contrast).enhance(2.0)
-        pop_art = saturated.quantize(colors=8)
-        pop_art = pop_art.convert('RGB')
-        
-        return pop_art
-        
-    except Exception as e:
-        print(f"Pop-art effekti xətası: {e}")
+        print(f"Komik xətası: {e}")
         return image
 
 @app.get("/", response_class=HTMLResponse)
@@ -216,13 +125,8 @@ async def ana_səhifə():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Karikatura Çevirici</title>
         <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
             body {
-                font-family: 'Arial', sans-serif;
+                font-family: Arial, sans-serif;
                 text-align: center;
                 margin: 0;
                 padding: 20px;
@@ -231,42 +135,23 @@ async def ana_səhifə():
                 color: white;
             }
             .container {
-                max-width: 800px;
+                max-width: 600px;
                 margin: 0 auto;
                 background: rgba(255, 255, 255, 0.1);
                 padding: 30px;
-                border-radius: 20px;
-                backdrop-filter: blur(10px);
+                border-radius: 15px;
             }
             h1 {
                 color: #ffd700;
-                font-size: 2.5em;
                 margin-bottom: 10px;
-            }
-            .features {
-                display: flex;
-                justify-content: center;
-                gap: 10px;
-                margin: 20px 0;
-                flex-wrap: wrap;
-            }
-            .feature {
-                background: rgba(255, 215, 0, 0.2);
-                padding: 8px 15px;
-                border-radius: 20px;
-                font-size: 0.9em;
             }
             .upload-area {
                 border: 2px dashed #ffd700;
-                border-radius: 15px;
-                padding: 40px;
+                border-radius: 10px;
+                padding: 30px;
                 margin: 20px 0;
                 background: rgba(255, 255, 255, 0.1);
                 cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            .upload-area:hover {
-                background: rgba(255, 255, 255, 0.2);
             }
             .file-input {
                 display: none;
@@ -275,14 +160,11 @@ async def ana_səhifə():
                 background: #ff6b6b;
                 color: white;
                 border: none;
-                padding: 15px 40px;
-                font-size: 1.2em;
-                border-radius: 50px;
+                padding: 12px 30px;
+                font-size: 1.1em;
+                border-radius: 25px;
                 cursor: pointer;
-                margin-top: 20px;
-            }
-            .upload-btn:hover {
-                background: #ff5252;
+                margin-top: 10px;
             }
             .upload-btn:disabled {
                 background: #cccccc;
@@ -293,11 +175,11 @@ async def ana_səhifə():
                 margin: 20px 0;
             }
             .spinner {
-                border: 4px solid rgba(255, 255, 255, 0.3);
+                border: 3px solid rgba(255, 255, 255, 0.3);
                 border-radius: 50%;
-                border-top: 4px solid #ffd700;
-                width: 40px;
-                height: 40px;
+                border-top: 3px solid #ffd700;
+                width: 30px;
+                height: 30px;
                 animation: spin 1s linear infinite;
                 margin: 0 auto;
             }
@@ -305,40 +187,28 @@ async def ana_səhifə():
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
-            #fileName {
-                margin: 10px 0;
-                color: #ffd700;
-                font-weight: bold;
-            }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🎨 Karikatura Çevirici</h1>
-            <p>Şəklini 6 fərqli stildə karikaturaya çevir!</p>
+            <p>Şəklini karikaturaya çevir!</p>
             
-            <div class="features">
-                <div class="feature">✅ Pulsuz</div>
-                <div class="feature">🚀 Sürətli</div>
-                <div class="feature">🔒 Təhlükəsiz</div>
-            </div>
-
             <form id="uploadForm" enctype="multipart/form-data">
                 <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                     <input type="file" id="fileInput" class="file-input" name="file" accept="image/*" required>
                     <h3>📁 Şəkil Seç</h3>
-                    <p>Faylı buraya sürükləyin və ya klikləyin</p>
-                    <p style="font-size: 0.8em; opacity: 0.8;">(JPG, PNG - Maksimum 5MB)</p>
+                    <p>Faylı buraya klikləyin</p>
                 </div>
-                <div id="fileName"></div>
+                <div id="fileName" style="margin: 10px 0; color: #ffd700;"></div>
                 
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    <p>Şəkil karikaturaya çevrilir...</p>
+                    <p>Şəkil işlənir...</p>
                 </div>
                 
                 <button type="submit" class="upload-btn" id="submitBtn">
-                    🎨 KARİKATURAYA ÇEVİR
+                    Çevir
                 </button>
             </form>
         </div>
@@ -347,7 +217,7 @@ async def ana_səhifə():
             document.getElementById('fileInput').addEventListener('change', function(e) {
                 const fileName = document.getElementById('fileName');
                 if (this.files.length > 0) {
-                    fileName.textContent = 'Seçilmiş fayl: ' + this.files[0].name;
+                    fileName.textContent = 'Seçildi: ' + this.files[0].name;
                 }
             });
 
@@ -359,12 +229,7 @@ async def ana_səhifə():
                 const loading = document.getElementById('loading');
                 
                 if (!fileInput.files.length) {
-                    alert('Zəhmət olmasa şəkil seçin!');
-                    return;
-                }
-
-                if (fileInput.files[0].size > 5 * 1024 * 1024) {
-                    alert('Fayl ölçüsü 5MB-dan çox olmamalıdır!');
+                    alert('Şəkil seçin!');
                     return;
                 }
 
@@ -384,10 +249,10 @@ async def ana_səhifə():
                         const html = await response.text();
                         document.body.innerHTML = html;
                     } else {
-                        throw new Error('Server xətası');
+                        throw new Error('Xəta baş verdi');
                     }
                 } catch (error) {
-                    alert('Xəta baş verdi: ' + error.message);
+                    alert(error.message);
                 } finally {
                     submitBtn.disabled = false;
                     loading.style.display = 'none';
@@ -402,7 +267,7 @@ async def ana_səhifə():
 async def upload(file: UploadFile = File(...)):
     try:
         if not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="Yalnız şəkil faylları qəbul edilir")
+            raise HTTPException(status_code=400, detail="Yalnız şəkil faylları")
 
         contents = await file.read()
         
@@ -410,7 +275,7 @@ async def upload(file: UploadFile = File(...)):
             image = Image.open(io.BytesIO(contents))
             image.verify()
         except Exception:
-            raise HTTPException(status_code=400, detail="Düzgün olmayan şəkil faylı")
+            raise HTTPException(status_code=400, detail="Düzgün olmayan şəkil")
 
         image = Image.open(io.BytesIO(contents))
         
@@ -419,8 +284,6 @@ async def upload(file: UploadFile = File(...)):
 
         for model in MODELS:
             try:
-                print(f"Model işləyir: {model['name']}")
-                
                 if model['type'] == "cartoon":
                     result_image = apply_cartoon_effect(image)
                 elif model['type'] == "pencil":
@@ -429,28 +292,21 @@ async def upload(file: UploadFile = File(...)):
                     result_image = apply_anime_effect(image)
                 elif model['type'] == "comic":
                     result_image = apply_comic_effect(image)
-                elif model['type'] == "painterly":
-                    result_image = apply_painterly_effect(image)
-                elif model['type'] == "popart":
-                    result_image = apply_popart_effect(image)
                 else:
                     result_image = apply_cartoon_effect(image)
                 
-                clean_name = model['name'].replace(' ', '_').replace('🎭', '').replace('✏️', '').replace('🌟', '').replace('🎨', '').replace('🖼️', '').replace('📐', '').strip()
-                filename = f"cartoon_{unique_id}_{clean_name}.jpg"
+                filename = f"cartoon_{unique_id}_{model['type']}.jpg"
                 filepath = f"/tmp/cartoon_images/{filename}"
                 
-                result_image.save(filepath, "JPEG", quality=85, optimize=True)
+                result_image.save(filepath, "JPEG", quality=85)
                 results.append({
                     'name': model['name'],
                     'description': model['description'],
                     'filename': filename
                 })
                 
-                print(f"Uğurlu: {model['name']}")
-                
             except Exception as e:
-                print(f"Model xətası {model['name']}: {e}")
+                print(f"Xəta: {model['name']}: {e}")
                 continue
 
         if not results:
@@ -459,14 +315,14 @@ async def upload(file: UploadFile = File(...)):
             <body style="font-family: Arial; text-align: center; margin-top: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <div style="background: rgba(255, 255, 255, 0.1); padding: 40px; border-radius: 20px; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #ffd700;">Xəta</h1>
-                    <p>Karikatura effektləri işləmədi. Yenidən cəhd edin.</p>
-                    <a href="/" style="background: #ff6b6b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">Yenidən cəhd et</a>
+                    <p>Yenidən cəhd edin.</p>
+                    <a href="/" style="background: #ff6b6b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Yenidən cəhd et</a>
                 </div>
             </body>
             </html>
             """)
 
-        html = f"""
+        html = """
         <!DOCTYPE html>
         <html lang="az">
         <head>
@@ -474,91 +330,83 @@ async def upload(file: UploadFile = File(...)):
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Nəticələr</title>
             <style>
-                body {{
+                body {
                     font-family: Arial, sans-serif;
                     margin: 0;
                     padding: 20px;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
-                    min-height: 100vh;
-                }}
-                .container {{
-                    max-width: 1200px;
+                }
+                .container {
+                    max-width: 1000px;
                     margin: 0 auto;
-                }}
-                h1 {{
+                }
+                h1 {
                     text-align: center;
                     color: #ffd700;
-                    margin-bottom: 30px;
-                }}
-                .results-grid {{
+                }
+                .results {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                     gap: 20px;
-                    margin-bottom: 40px;
-                }}
-                .result-card {{
+                    margin: 30px 0;
+                }
+                .result {
                     background: rgba(255, 255, 255, 0.1);
-                    padding: 20px;
-                    border-radius: 15px;
-                    text-align: center;
-                }}
-                .result-card h3 {{
-                    color: #ffd700;
-                    margin-bottom: 10px;
-                }}
-                .result-card img {{
-                    width: 100%;
-                    max-width: 250px;
-                    height: 250px;
-                    object-fit: cover;
+                    padding: 15px;
                     border-radius: 10px;
-                    margin-bottom: 10px;
-                }}
-                .download-btn {{
+                    text-align: center;
+                }
+                .result img {
+                    width: 100%;
+                    max-width: 200px;
+                    height: 200px;
+                    object-fit: cover;
+                    border-radius: 5px;
+                }
+                .download {
                     background: #27ae60;
+                    color: white;
+                    padding: 8px 15px;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    display: inline-block;
+                    margin-top: 10px;
+                }
+                .back {
+                    background: #3498db;
                     color: white;
                     padding: 10px 20px;
                     text-decoration: none;
                     border-radius: 5px;
                     display: inline-block;
-                }}
-                .back-btn {{
-                    background: #3498db;
-                    color: white;
-                    padding: 15px 30px;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    display: inline-block;
-                }}
-                .center {{
+                }
+                .center {
                     text-align: center;
-                }}
+                }
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>🎉 Nəticələr Hazırdır!</h1>
-                <div class="results-grid">
+                <h1>Nəticələr Hazırdır!</h1>
+                <div class="results">
         """
 
         for result in results:
             html += f"""
-                    <div class="result-card">
+                    <div class="result">
                         <h3>{result['name']}</h3>
                         <p>{result['description']}</p>
                         <img src="/img/{result['filename']}" alt="{result['name']}">
                         <br>
-                        <a href="/img/{result['filename']}" download="{result['filename']}" class="download-btn">
-                            💾 Endir
-                        </a>
+                        <a href="/img/{result['filename']}" download="{result['filename']}" class="download">Endir</a>
                     </div>
             """
 
         html += """
                 </div>
                 <div class="center">
-                    <a href="/" class="back-btn">🔄 Yenidən Çevir</a>
+                    <a href="/" class="back">Yenidən Çevir</a>
                 </div>
             </div>
         </body>
@@ -569,13 +417,13 @@ async def upload(file: UploadFile = File(...)):
 
     except Exception as e:
         print(f"Ümumi xəta: {e}")
-        return HTMLResponse(f"""
+        return HTMLResponse("""
         <html>
         <body style="font-family: Arial; text-align: center; margin-top: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <div style="background: rgba(255, 255, 255, 0.1); padding: 40px; border-radius: 20px; max-width: 600px; margin: 0 auto;">
                 <h1 style="color: #ffd700;">Xəta</h1>
                 <p>Yenidən cəhd edin.</p>
-                <a href="/" style="background: #ff6b6b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">Yenidən cəhd et</a>
+                <a href="/" style="background: #ff6b6b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Yenidən cəhd et</a>
             </div>
         </body>
         </html>
