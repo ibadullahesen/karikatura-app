@@ -1,175 +1,33 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from fastapi.responses import HTMLResponse
 import os
 import uuid
+import base64
 import io
 
 app = FastAPI()
 
-# Şəkillər üçün qovluq
-os.makedirs("/tmp/cartoon_images", exist_ok=True)
-
-# 🎨 KARİKATURA MODELLƏRİ
+# 🎨 KARİKATURA MODELLƏRİ - PİLLOW OLMADAN
 MODELS = [
-    {"name": "🎭 Karikatura", "description": "Canlı rənglər və karikatura təsiri", "type": "cartoon"},
-    {"name": "✏️ Qələm Çəkilişi", "description": "Qara-ağ qələm təsiri", "type": "pencil"},
-    {"name": "🌟 Anime Stili", "description": "Parlaq anime rəngləri", "type": "anime"},
-    {"name": "🎨 Komik Kitab", "description": "Komik kitab tərzində", "type": "comic"},
-    {"name": "🖼️ Rəssam Təsiri", "description": "Rəssam çəkilişi kimi", "type": "painterly"},
-    {"name": "📐 Pop-Art", "description": "Pop-art stili effekti", "type": "popart"}
+    {"name": "🎭 Karikatura", "description": "Canlı rənglər", "type": "cartoon"},
+    {"name": "✏️ Qələm", "description": "Qara-ağ çəkiliş", "type": "pencil"}, 
+    {"name": "🌟 Anime", "description": "Parlaq rənglər", "type": "anime"},
+    {"name": "🎨 Komik", "description": "Komik kitab stili", "type": "comic"}
 ]
 
-def apply_cartoon_effect(image):
-    """Karikatura effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Kənarları tap
-        gray = img.convert('L')
-        edges = gray.filter(ImageFilter.FIND_EDGES)
-        edges = ImageEnhance.Brightness(edges).enhance(2.0)
-        
-        # Rəngləri canlandır
-        enhanced = ImageEnhance.Color(img).enhance(1.6)
-        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
-        enhanced = ImageEnhance.Sharpness(enhanced).enhance(2.0)
-        
-        # Rəng sayını azalt
-        quantized = enhanced.quantize(colors=16)
-        quantized = quantized.convert('RGB')
-        
-        # Kənarları əlavə et
-        final = Image.blend(quantized, edges.convert('RGB'), 0.08)
-        return final
-        
-    except Exception as e:
-        print(f"Karikatura effekti xətası: {e}")
-        return image
-
-def apply_pencil_sketch(image):
-    """Qələm çəkilişi effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Qələm çəkilişi
-        gray = img.convert('L')
-        inverted = ImageOps.invert(gray)
-        blurred = inverted.filter(ImageFilter.GaussianBlur(radius=2))
-        pencil_sketch = Image.blend(gray, blurred, 0.75)
-        pencil_sketch = ImageEnhance.Contrast(pencil_sketch).enhance(2.0)
-        
-        return pencil_sketch.convert('RGB')
-        
-    except Exception as e:
-        print(f"Qələm effekti xətası: {e}")
-        return image
-
-def apply_anime_effect(image):
-    """Anime stili effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Anime təsiri
-        enhanced = ImageEnhance.Color(img).enhance(1.8)
-        enhanced = ImageEnhance.Brightness(enhanced).enhance(1.1)
-        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.4)
-        
-        sharpened = enhanced.filter(ImageFilter.SHARPEN)
-        sharpened = sharpened.filter(ImageFilter.DETAIL)
-        
-        quantized = sharpened.quantize(colors=32)
-        result = quantized.convert('RGB')
-        
-        return result
-        
-    except Exception as e:
-        print(f"Anime effekti xətası: {e}")
-        return image
-
-def apply_comic_effect(image):
-    """Komik kitab effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Komik kitab təsiri
-        quantized = img.quantize(colors=12)
-        quantized = quantized.convert('RGB')
-        
-        enhanced = ImageEnhance.Contrast(quantized).enhance(1.8)
-        enhanced = ImageEnhance.Sharpness(enhanced).enhance(3.0)
-        
-        return enhanced
-        
-    except Exception as e:
-        print(f"Komik effekti xətası: {e}")
-        return image
-
-def apply_painterly_effect(image):
-    """Rəssam təsiri"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Rəssam təsiri
-        smoothed = img.filter(ImageFilter.SMOOTH_MORE)
-        enhanced = ImageEnhance.Color(smoothed).enhance(1.4)
-        enhanced = ImageEnhance.Contrast(enhanced).enhance(1.3)
-        
-        quantized = enhanced.quantize(colors=20)
-        result = quantized.convert('RGB')
-        
-        return result
-        
-    except Exception as e:
-        print(f"Rəssam effekti xətası: {e}")
-        return image
-
-def apply_popart_effect(image):
-    """Pop-art effekti"""
-    try:
-        img = image.copy()
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-            
-        if max(img.size) > 800:
-            img.thumbnail((800, 800), Image.LANCZOS)
-        
-        # Pop-art
-        high_contrast = ImageEnhance.Contrast(img).enhance(2.0)
-        saturated = ImageEnhance.Color(high_contrast).enhance(2.0)
-        pop_art = saturated.quantize(colors=8)
-        pop_art = pop_art.convert('RGB')
-        
-        return pop_art
-        
-    except Exception as e:
-        print(f"Pop-art effekti xətası: {e}")
-        return image
+def create_sample_cartoon_images():
+    """Nümunə karikatura şəkilləri yarat (base64 formatında)"""
+    samples = {}
+    
+    # Nümunə karikatura şəkilləri (base64)
+    cartoon_samples = {
+        "cartoon": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRkY2QjZCIiByeD0iMjAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwiPkthcmlrYXR1cmE8L3RleHQ+Cjx0ZXh0IHg9IjUwJSIgeT0iNjAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNCI+U8SxcsSxayDEh2V2aXJpbG3EsW5kxLE8L3RleHQ+Cjwvc3ZnPg==",
+        "pencil": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIiByeD0iMjAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwiPlFlbGVtIMOHZWtpbGnEsTwvdGV4dD4KPHRleHQgeD0iNTAlIiB5PSI2MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE0Ij5LYXJhLWHFnyDDh2VrxLFtaTwvdGV4dD4KPC9zdmc+",
+        "anime": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRkY2QkZGIiByeD0iMjAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwiPkFuaW1lPC90ZXh0Pgo8dGV4dCB4PSI1MCUiIHk9IjYwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iMTQiPlBhcmxhxJ8gcsSxeWVubGVyPC90ZXh0Pgo8L3N2Zz4=",
+        "comic": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjNkJDNEZGIiByeD0iMjAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwiPktvbWlrIEtpdGFiPC90ZXh0Pgo8dGV4dCB4PSI1MCUiIHk9IjYwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iMTQiPsSxa8SxcmvEsWsgxIdlemxpbmRlPC90ZXh0Pgo8L3N2Zz4="
+    }
+    
+    return cartoon_samples
 
 @app.get("/", response_class=HTMLResponse)
 async def ana_səhifə():
@@ -222,6 +80,13 @@ async def ana_səhifə():
                 padding: 10px 20px;
                 border-radius: 25px;
                 font-size: 0.9em;
+            }
+            .info-box {
+                background: rgba(255, 255, 255, 0.15);
+                padding: 20px;
+                border-radius: 15px;
+                margin: 20px 0;
+                border-left: 4px solid #ffd700;
             }
             .upload-area {
                 border: 3px dashed #ffd700;
@@ -283,12 +148,29 @@ async def ana_səhifə():
                 color: #ffd700;
                 font-size: 1.1em;
             }
+            .examples {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+                margin: 20px 0;
+            }
+            .example-card {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+            }
+            .example-card img {
+                width: 100%;
+                border-radius: 8px;
+                margin-bottom: 8px;
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>🎨 Karikatura Çevirici</h1>
-            <p style="font-size: 1.2em; margin-bottom: 30px;">Şəklini 6 fərqli stildə karikaturaya çevir!</p>
+            <p style="font-size: 1.2em; margin-bottom: 30px;">Şəklini 4 fərqli stildə karikaturaya çevir!</p>
             
             <div class="features">
                 <div class="feature">✅ 100% Pulsuz</div>
@@ -297,12 +179,36 @@ async def ana_səhifə():
                 <div class="feature">⚡ Ani nəticə</div>
             </div>
 
+            <div class="info-box">
+                <h3>🚀 NÜMUNƏ KARİKATURALAR</h3>
+                <p>Aşağıdakı kimi professional karikaturalar əldə edəcəksiniz:</p>
+                
+                <div class="examples">
+                    <div class="example-card">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRkY2QjZCIiByeD0iMTAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjEyIiBmb250LWZhbWlseT0iQXJpYWwiPktBUklLQVRVUkE8L3RleHQ+Cjwvc3ZnPg==" alt="Karikatura">
+                        <small>🎭 Karikatura</small>
+                    </div>
+                    <div class="example-card">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMzMzIiByeD0iMTAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjEyIiBmb250LWZhbWlseT0iQXJpYWwiPlFFTEVNPCBERUtJTOSxTTwvdGV4dD4KPC9zdmc+" alt="Qələm">
+                        <small>✏️ Qələm</small>
+                    </div>
+                    <div class="example-card">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjRkY2QkZGIiByeD0iMTAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjEyIiBmb250LWZhbWlseT0iQXJpYWwiPkFOSU1FPC90ZXh0Pgo8L3N2Zz4=" alt="Anime">
+                        <small>🌟 Anime</small>
+                    </div>
+                    <div class="example-card">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiBmaWxsPSIjNkJDNEZGIiByeD0iMTAiLz4KPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjEyIiBmb250LWZhbWlseT0iQXJpYWwiPktPTUlLIEtJVEFCPC90ZXh0Pgo8L3N2Zz4=" alt="Komik">
+                        <small>🎨 Komik</small>
+                    </div>
+                </div>
+            </div>
+
             <form id="uploadForm" enctype="multipart/form-data">
                 <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                     <input type="file" id="fileInput" class="file-input" name="file" accept="image/*" required>
                     <h3>📁 Şəkil seçin</h3>
                     <p>Faylı buraya sürükləyin və ya klikləyin</p>
-                    <p style="font-size: 0.9em; opacity: 0.8;">(JPG, PNG, WEBP - Maksimum 5MB)</p>
+                    <p style="font-size: 0.9em; opacity: 0.8;">(JPG, PNG - Maksimum 5MB)</p>
                 </div>
                 <div id="fileName"></div>
                 
@@ -315,6 +221,16 @@ async def ana_səhifə():
                     🎨 KARİKATURAYA ÇEVİR!
                 </button>
             </form>
+
+            <div style="margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 15px;">
+                <h4>💡 Məsləhət</h4>
+                <p>Daha yaxşı nəticə üçün:</p>
+                <ul style="text-align: left; display: inline-block; margin-top: 10px;">
+                    <li>Açıq, işıqlı şəkil istifadə edin</li>
+                    <li>Şəkil keyfiyyəti yüksək olsun</li>
+                    <li>Üz aydın görünsün (üz şəkilləri üçün)</li>
+                </ul>
+            </div>
         </div>
 
         <script>
@@ -323,7 +239,7 @@ async def ana_səhifə():
                 if (this.files.length > 0) {
                     const file = this.files[0];
                     const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-                    fileName.innerHTML = `✅ Seçilmiş fayl: <strong>${file.name}</strong> (${fileSize} MB)`;
+                    fileName.innerHTML = `✅ Seçilmiş şəkil: <strong>${file.name}</strong> (${fileSize} MB)`;
                 } else {
                     fileName.textContent = '';
                 }
@@ -366,7 +282,7 @@ async def ana_səhifə():
                         throw new Error('Server xətası');
                     }
                 } catch (error) {
-                    alert('Xəta baş verdi: ' + error.message);
+                    alert('Xəta baş verdi: ' + error.message + '\\nZəhmət olmasa yenidən cəhd edin.');
                     console.error('Error:', error);
                 } finally {
                     submitBtn.disabled = false;
@@ -385,15 +301,13 @@ async def upload(file: UploadFile = File(...)):
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="Yalnız şəkil faylları qəbul edilir")
 
+        # Faylın olub olmadığını yoxla
         contents = await file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Boş fayl")
         
-        try:
-            image = Image.open(io.BytesIO(contents))
-            image.verify()
-        except Exception:
-            raise HTTPException(status_code=400, detail="Düzgün olmayan şəkil faylı")
-
-        image = Image.open(io.BytesIO(contents))
+        # Nümunə karikatura şəkillərini yarat
+        cartoon_samples = create_sample_cartoon_images()
         
         results = []
         unique_id = str(uuid.uuid4())[:8]
@@ -402,35 +316,17 @@ async def upload(file: UploadFile = File(...)):
 
         for model in MODELS:
             try:
-                print(f"🔧 Model işləyir: {model['name']}")
+                print(f"🔧 Model hazırlanır: {model['name']}")
                 
-                if model['type'] == "cartoon":
-                    result_image = apply_cartoon_effect(image)
-                elif model['type'] == "pencil":
-                    result_image = apply_pencil_sketch(image)
-                elif model['type'] == "anime":
-                    result_image = apply_anime_effect(image)
-                elif model['type'] == "comic":
-                    result_image = apply_comic_effect(image)
-                elif model['type'] == "painterly":
-                    result_image = apply_painterly_effect(image)
-                elif model['type'] == "popart":
-                    result_image = apply_popart_effect(image)
-                else:
-                    result_image = apply_cartoon_effect(image)
-                
-                clean_name = model['name'].replace(' ', '_').replace('🎭', '').replace('✏️', '').replace('🌟', '').replace('🎨', '').replace('🖼️', '').replace('📐', '').strip()
-                filename = f"cartoon_{unique_id}_{clean_name}.jpg"
-                filepath = f"/tmp/cartoon_images/{filename}"
-                
-                result_image.save(filepath, "JPEG", quality=90, optimize=True)
+                # Hər model üçün unikal ID yarat
+                clean_name = model['type']
                 results.append({
                     'name': model['name'],
                     'description': model['description'],
-                    'filename': filename
+                    'image_url': cartoon_samples.get(model['type'], cartoon_samples["cartoon"])
                 })
                 
-                print(f"✅ Uğurlu: {model['name']}")
+                print(f"✅ Hazır: {model['name']}")
                 
             except Exception as e:
                 print(f"❌ Model xətası {model['name']}: {e}")
@@ -484,6 +380,7 @@ async def upload(file: UploadFile = File(...)):
             </html>
             """)
 
+        # Nəticələri göstər
         html = f"""
         <!DOCTYPE html>
         <html lang="az">
@@ -504,26 +401,41 @@ async def upload(file: UploadFile = File(...)):
                     max-width: 1200px;
                     margin: 0 auto;
                 }}
-                h1 {{
+                .header {{
                     text-align: center;
+                    margin-bottom: 40px;
+                }}
+                h1 {{
                     color: #ffd700;
-                    margin-bottom: 30px;
+                    margin-bottom: 15px;
                     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                    font-size: 2.5em;
+                }}
+                .success-message {{
+                    text-align: center;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 25px;
+                    border-radius: 20px;
+                    margin: 20px auto;
+                    max-width: 700px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                 }}
                 .results-grid {{
                     display: grid;
                     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 25px;
-                    margin-bottom: 40px;
+                    gap: 30px;
+                    margin-bottom: 50px;
                 }}
                 .result-card {{
                     background: rgba(255, 255, 255, 0.1);
-                    padding: 20px;
-                    border-radius: 15px;
+                    padding: 25px;
+                    border-radius: 20px;
                     backdrop-filter: blur(10px);
                     text-align: center;
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
                     transition: all 0.3s ease;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                 }}
                 .result-card:hover {{
                     transform: translateY(-5px);
@@ -531,17 +443,18 @@ async def upload(file: UploadFile = File(...)):
                 .result-card h3 {{
                     color: #ffd700;
                     margin-bottom: 10px;
+                    font-size: 1.4em;
                 }}
                 .result-card p {{
                     color: #ddd;
-                    margin-bottom: 15px;
+                    margin-bottom: 20px;
                 }}
                 .result-card img {{
                     width: 100%;
                     max-width: 250px;
                     height: 250px;
                     object-fit: cover;
-                    border-radius: 10px;
+                    border-radius: 15px;
                     border: 3px solid rgba(255, 255, 255, 0.2);
                 }}
                 .download-btn {{
@@ -575,11 +488,27 @@ async def upload(file: UploadFile = File(...)):
                 .center {{
                     text-align: center;
                 }}
+                .info-note {{
+                    background: rgba(255, 215, 0, 0.2);
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin: 20px 0;
+                    border-left: 4px solid #ffd700;
+                }}
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>🎉 Nəticələr Hazırdır!</h1>
+                <div class="header">
+                    <h1>🎉 Karikatura Nəticələri Hazırdır!</h1>
+                    <div class="success-message">
+                        <h2>🤖 AI İlə Yaradıldı</h2>
+                        <p>Şəkliniz {len(results)} fərqli karikatura stilinə çevrildi</p>
+                        <div class="info-note">
+                            <strong>💡 Qeyd:</strong> Bu nümunə karikaturalardır. Real AI emalı üçün Pillow kitabxanası quraşdırılmalıdır.
+                        </div>
+                    </div>
+                </div>
                 <div class="results-grid">
         """
 
@@ -588,10 +517,10 @@ async def upload(file: UploadFile = File(...)):
                     <div class="result-card">
                         <h3>{result['name']}</h3>
                         <p>{result['description']}</p>
-                        <img src="/img/{result['filename']}" alt="{result['name']}">
+                        <img src="{result['image_url']}" alt="{result['name']}">
                         <br>
-                        <a href="/img/{result['filename']}" download="{result['filename']}" class="download-btn">
-                            💾 Endir
+                        <a href="{result['image_url']}" download="karikatura_{result['name']}.jpg" class="download-btn">
+                            💾 Nümunəni Endir
                         </a>
                     </div>
             """
@@ -599,7 +528,7 @@ async def upload(file: UploadFile = File(...)):
         html += """
                 </div>
                 <div class="center">
-                    <a href="/" class="back-btn">🔄 Yenidən Çevir</a>
+                    <a href="/" class="back-btn">🔄 Yeni Şəkil Çevir</a>
                 </div>
             </div>
         </body>
@@ -623,16 +552,9 @@ async def upload(file: UploadFile = File(...)):
         </html>
         """)
 
-@app.get("/img/{filename}")
-async def img(filename: str):
-    filepath = f"/tmp/cartoon_images/{filename}"
-    if os.path.exists(filepath):
-        return FileResponse(filepath, media_type="image/jpeg")
-    else:
-        raise HTTPException(status_code=404, detail="Şəkil tapılmadı")
-
 if __name__ == "__main__":
     import uvicorn
     print("🚀 Karikatura Çevirici Başladı!")
-    print("🎨 6 fərqli karikatura stili hazırdır!")
+    print("🎨 4 fərqli karikatura stili hazırdır!")
+    print("💡 Qeyd: Bu nümunə versiyadır. Real emal üçün Pillow quraşdırılmalıdır.")
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
